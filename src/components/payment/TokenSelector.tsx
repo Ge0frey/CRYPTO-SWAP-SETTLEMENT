@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import {
@@ -9,20 +8,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Devnet token addresses
 const TOKENS = [
-  { symbol: "SOL", name: "Solana", mint: "So11111111111111111111111111111111111111112" },
-  { symbol: "USDC", name: "USD Coin", mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+  { 
+    symbol: "SOL", 
+    name: "Solana", 
+    mint: "So11111111111111111111111111111111111111112" 
+  },
+  { 
+    symbol: "USDC", 
+    name: "USD Coin", 
+    mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  // Mainnet USDC
+  }
 ];
 
-const TokenSelector = () => {
+const TokenSelector = ({ onTokenSelect }) => {
   const [selectedToken, setSelectedToken] = useState(TOKENS[0].mint);
+
+  const handleTokenChange = (mint: string) => {
+    setSelectedToken(mint);
+    onTokenSelect(mint);
+  };
 
   return (
     <div className="space-y-4">
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Select Token
       </label>
-      <Select value={selectedToken} onValueChange={setSelectedToken}>
+      <Select value={selectedToken} onValueChange={handleTokenChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select a token" />
         </SelectTrigger>

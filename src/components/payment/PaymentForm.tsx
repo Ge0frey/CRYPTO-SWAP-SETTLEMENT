@@ -1,30 +1,108 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { getQuote, getSwapTransaction } from "@/lib/jupiter";
+import { 
+  Connection, 
+  PublicKey, 
+  VersionedTransaction 
+} from "@solana/web3.js";
 
-const PaymentForm = () => {
+// Mainnet token addresses
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Mainnet USDC
+
+const PaymentForm = ({ selectedToken }) => {
   const [amount, setAmount] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const wallet = useWallet();
+  
+  const connection = new Connection("https://api.mainnet-beta.solana.com");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      toast({
-        title: "Processing payment",
-        description: "Please confirm the transaction in your wallet",
-      });
-      
-      // Jupiter integration will go here
-      
-    } catch (error) {
+    if (!wallet.connected || !wallet.publicKey) {
       toast({
         title: "Error",
-        description: "Failed to process payment",
+        description: "Please connect your wallet first",
         variant: "destructive",
       });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Convert amount to proper units (lamports for SOL, or micro-units for USDC)
+      const multiplier = selectedToken === SOL_MINT ? 1e9 : 1e6;
+      const inputAmount = Math.round(parseFloat(amount) * multiplier);
+      
+      console.log("Submitting quote request with:", {
+        inputMint: selectedToken,
+        outputMint: USDC_MINT,
+        amount: inputAmount,
+        slippageBps: 50
+      });
+
+      // Get quote using Jupiter API
+      const quoteResponse = await getQuote(
+        selectedToken,
+        USDC_MINT,
+        inputAmount,
+        50
+      );
+
+      console.log("Quote response:", quoteResponse);
+
+      // Get swap transaction
+      const swapResult = await getSwapTransaction(
+        quoteResponse,
+        wallet.publicKey.toString()
+      );
+
+      if (!swapResult || !swapResult.swapTransaction) {
+        throw new Error("Failed to get swap transaction");
+      }
+
+      // Deserialize the transaction
+      const transaction = VersionedTransaction.deserialize(
+        Buffer.from(swapResult.swapTransaction, 'base64')
+      );
+
+      // Sign and send the transaction
+      const signature = await wallet.sendTransaction(
+        transaction,
+        connection,
+        { maxRetries: 3 }
+      );
+
+      console.log("Transaction sent:", signature);
+
+      // Wait for confirmation
+      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+
+      if (confirmation.value.err) {
+        throw new Error("Transaction failed");
+      }
+
+      toast({
+        title: "Success",
+        description: `Payment processed successfully. Signature: ${signature}`,
+      });
+
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -41,11 +119,18 @@ const PaymentForm = () => {
           onChange={(e) => setAmount(e.target.value)}
           className="mt-1"
           required
+          disabled={isLoading}
+          min="0.000001"
+          step="0.000001"
         />
       </div>
       
-      <Button type="submit" className="w-full">
-        Pay Now
+      <Button 
+        type="submit" 
+        className="w-full"
+        disabled={isLoading || !amount || parseFloat(amount) <= 0}
+      >
+        {isLoading ? "Processing..." : "Pay Now"}
       </Button>
     </form>
   );

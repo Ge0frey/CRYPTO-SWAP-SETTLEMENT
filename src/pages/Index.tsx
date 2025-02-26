@@ -1,14 +1,20 @@
-
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 import PaymentForm from "@/components/payment/PaymentForm";
 import TokenSelector from "@/components/payment/TokenSelector";
 import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
+import { useState } from "react";
+
+const TOKENS = [
+  { symbol: "SOL", name: "Solana", mint: "So11111111111111111111111111111111111111112" },
+  { symbol: "USDC", name: "USD Coin", mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+];
 
 const Index = () => {
   const { toast } = useToast();
   const { connected } = useWallet();
+  const [selectedToken, setSelectedToken] = useState(TOKENS[0].mint);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
@@ -29,8 +35,8 @@ const Index = () => {
 
           {connected ? (
             <div className="space-y-6">
-              <TokenSelector />
-              <PaymentForm />
+              <TokenSelector onTokenSelect={setSelectedToken} />
+              <PaymentForm selectedToken={selectedToken} />
             </div>
           ) : (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">
