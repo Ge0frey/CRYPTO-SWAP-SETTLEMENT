@@ -18,7 +18,12 @@ export const getQuote = async (
       inputMint,
       outputMint,
       amount: amountStr,
-      slippageBps: slippageBps.toString()
+      slippageBps: slippageBps.toString(),
+      onlyDirectRoutes: "true",
+      asLegacyTransaction: "true",
+      // Request setup instructions
+      computeAllPossibleRoutes: "true",
+      includeSetupInstructions: "true"
     });
 
     const url = `${JUPITER_QUOTE_API}/quote?${params.toString()}`;

@@ -4,24 +4,68 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { getQuote, getSwapTransaction } from "@/lib/jupiter";
-import { 
-  Connection, 
-  PublicKey, 
-  VersionedTransaction 
-} from "@solana/web3.js";
+import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
 
-// Mainnet token addresses
+// Correctly format the Helius RPC URL
+const HELIUS_API_KEY = import.meta.env.VITE_HELIUS_API_KEY;
+const RPC_ENDPOINT = `https://rpc.helius.xyz/?api-key=${HELIUS_API_KEY}`;
+
+// Fallback RPC in case Helius fails
+const FALLBACK_RPC = "https://api.mainnet-beta.solana.com";
+
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Mainnet USDC
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
-const PaymentForm = ({ selectedToken }) => {
+const PaymentForm = () => {
   const [amount, setAmount] = useState("");
   const [merchantAddress, setMerchantAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const wallet = useWallet();
   
-  const connection = new Connection("https://api.mainnet-beta.solana.com");
+  // Initialize connection with fallback
+  const [connection, setConnection] = useState(() => {
+    try {
+      return new Connection(RPC_ENDPOINT, {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000,
+      });
+    } catch (error) {
+      console.warn("Failed to connect to primary RPC, using fallback");
+      return new Connection(FALLBACK_RPC, {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000,
+      });
+    }
+  });
+
+  // Check RPC connection with fallback
+  const checkRPCConnection = async () => {
+    try {
+      await connection.getLatestBlockhash();
+      return true;
+    } catch (error) {
+      console.warn("Primary RPC failed, trying fallback...");
+      try {
+        // Switch to fallback RPC
+        const fallbackConnection = new Connection(FALLBACK_RPC, {
+          commitment: 'confirmed',
+          confirmTransactionInitialTimeout: 60000,
+        });
+        await fallbackConnection.getLatestBlockhash();
+        setConnection(fallbackConnection);
+        return true;
+      } catch (fallbackError) {
+        console.error("All RPC connections failed:", fallbackError);
+        toast({
+          title: "Connection Error",
+          description: "Unable to connect to Solana network. Please try again later.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+  };
 
   const validateSolanaAddress = (address: string): boolean => {
     try {
@@ -32,9 +76,36 @@ const PaymentForm = ({ selectedToken }) => {
     }
   };
 
+  const validateAmount = (value: string): boolean => {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return false;
+    if (numValue <= 0) return false;
+    return numValue >= 0.000000001; // Minimum 1 lamport
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    if (value === "") {
+      setAmount("");
+      return;
+    }
+    
+    if (!/^\d*\.?\d*$/.test(value)) return;
+    
+    const parts = value.split('.');
+    if (parts.length > 1 && parts[1].length > 9) return;
+    
+    setAmount(value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check RPC connection first
+    const isConnected = await checkRPCConnection();
+    if (!isConnected) return;
+
     if (!wallet.connected || !wallet.publicKey) {
       toast({
         title: "Error",
@@ -56,62 +127,65 @@ const PaymentForm = ({ selectedToken }) => {
     try {
       setIsLoading(true);
       
-      // Convert amount to proper units (lamports for SOL, or micro-units for USDC)
-      const multiplier = selectedToken === SOL_MINT ? 1e9 : 1e6;
-      const inputAmount = Math.round(parseFloat(amount) * multiplier);
+      // Convert SOL amount to lamports
+      const inputAmount = Math.round(parseFloat(amount) * 1e9);
       
-      console.log("Submitting quote request with:", {
-        inputMint: selectedToken,
-        outputMint: USDC_MINT,
-        amount: inputAmount,
-        slippageBps: 50
-      });
+      // Get balance with retry logic
+      let balance;
+      try {
+        balance = await connection.getBalance(wallet.publicKey);
+      } catch (error) {
+        console.error("Balance check error:", error);
+        throw new Error("Unable to check wallet balance. Please try again.");
+      }
 
-      // Get quote using Jupiter API
+      const minSolBalance = inputAmount + (0.01 * 1e9); // Amount + 0.01 SOL for fees
+      
+      if (balance < minSolBalance) {
+        throw new Error("Insufficient SOL balance. Please keep at least 0.01 SOL for fees.");
+      }
+
+      // Get quote for SOL to USDC swap
       const quoteResponse = await getQuote(
-        selectedToken,
+        SOL_MINT,
         USDC_MINT,
         inputAmount,
         50
       );
 
-      console.log("Quote response:", quoteResponse);
-
-      // Get swap transaction with merchant as recipient
+      // Get swap transaction
       const swapResult = await getSwapTransaction(
         quoteResponse,
         wallet.publicKey.toString(),
-        merchantAddress // Pass merchant address to swap function
+        merchantAddress
       );
 
       if (!swapResult || !swapResult.swapTransaction) {
         throw new Error("Failed to get swap transaction");
       }
 
-      // Deserialize the transaction
       const transaction = VersionedTransaction.deserialize(
         Buffer.from(swapResult.swapTransaction, 'base64')
       );
 
-      // Sign and send the transaction
-      const signature = await wallet.sendTransaction(
-        transaction,
-        connection,
-        { maxRetries: 3 }
-      );
+      // Add retry logic for transaction
+      let signature;
+      try {
+        signature = await wallet.sendTransaction(
+          transaction,
+          connection,
+          { maxRetries: 3 }
+        );
 
-      console.log("Transaction sent:", signature);
-
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-
-      if (confirmation.value.err) {
-        throw new Error("Transaction failed");
+        await connection.confirmTransaction(signature, 'confirmed');
+      } catch (error) {
+        console.error("Transaction error:", error);
+        throw new Error("Transaction failed. Please try again.");
       }
 
       toast({
         title: "Success",
-        description: `Payment processed successfully. Signature: ${signature}`,
+        description: `Payment processed successfully. The merchant will receive USDC. Signature: ${signature}`,
       });
 
     } catch (error) {
@@ -145,25 +219,36 @@ const PaymentForm = ({ selectedToken }) => {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Amount
+          Amount (SOL)
         </label>
         <Input
-          type="number"
-          placeholder="0.00"
+          type="text"
+          placeholder="Enter amount in SOL"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={handleAmountChange}
           className="mt-1"
           required
           disabled={isLoading}
-          min="0.000001"
-          step="0.000001"
         />
+        <p className="mt-1 text-sm text-gray-500">
+          Min: 0.000000001 SOL (1 lamport)
+        </p>
+      </div>
+
+      <div className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-md">
+        <p>Note: Please keep at least 0.01 SOL in your wallet for network fees.</p>
+        <p className="mt-1">The merchant will receive the equivalent amount in USDC.</p>
       </div>
       
       <Button 
         type="submit" 
         className="w-full"
-        disabled={isLoading || !amount || parseFloat(amount) <= 0 || !merchantAddress}
+        disabled={
+          isLoading || 
+          !amount || 
+          !validateAmount(amount) || 
+          !merchantAddress
+        }
       >
         {isLoading ? "Processing..." : "Pay Now"}
       </Button>
