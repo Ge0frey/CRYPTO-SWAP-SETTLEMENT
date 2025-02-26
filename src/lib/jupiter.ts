@@ -43,7 +43,8 @@ export const getQuote = async (
 
 export const getSwapTransaction = async (
   quoteResponse: any,
-  userPublicKey: string
+  userPublicKey: string,
+  merchantAddress: string
 ) => {
   try {
     const response = await fetch(`${JUPITER_QUOTE_API}/swap`, {
@@ -54,6 +55,7 @@ export const getSwapTransaction = async (
       body: JSON.stringify({
         quoteResponse,
         userPublicKey,
+        destinationWallet: merchantAddress,
         wrapUnwrapSOL: true
       })
     });

@@ -16,11 +16,21 @@ const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Mainnet USD
 
 const PaymentForm = ({ selectedToken }) => {
   const [amount, setAmount] = useState("");
+  const [merchantAddress, setMerchantAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const wallet = useWallet();
   
   const connection = new Connection("https://api.mainnet-beta.solana.com");
+
+  const validateSolanaAddress = (address: string): boolean => {
+    try {
+      new PublicKey(address);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +39,15 @@ const PaymentForm = ({ selectedToken }) => {
       toast({
         title: "Error",
         description: "Please connect your wallet first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateSolanaAddress(merchantAddress)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid merchant Solana address",
         variant: "destructive",
       });
       return;
@@ -58,10 +77,11 @@ const PaymentForm = ({ selectedToken }) => {
 
       console.log("Quote response:", quoteResponse);
 
-      // Get swap transaction
+      // Get swap transaction with merchant as recipient
       const swapResult = await getSwapTransaction(
         quoteResponse,
-        wallet.publicKey.toString()
+        wallet.publicKey.toString(),
+        merchantAddress // Pass merchant address to swap function
       );
 
       if (!swapResult || !swapResult.swapTransaction) {
@@ -110,6 +130,21 @@ const PaymentForm = ({ selectedToken }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Merchant Address
+        </label>
+        <Input
+          type="text"
+          placeholder="Enter merchant's Solana address"
+          value={merchantAddress}
+          onChange={(e) => setMerchantAddress(e.target.value)}
+          className="mt-1"
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Amount
         </label>
         <Input
@@ -128,7 +163,7 @@ const PaymentForm = ({ selectedToken }) => {
       <Button 
         type="submit" 
         className="w-full"
-        disabled={isLoading || !amount || parseFloat(amount) <= 0}
+        disabled={isLoading || !amount || parseFloat(amount) <= 0 || !merchantAddress}
       >
         {isLoading ? "Processing..." : "Pay Now"}
       </Button>
