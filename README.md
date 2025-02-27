@@ -7,16 +7,16 @@ This is a payment gateway application that allows users to make payments in SOL 
 ## Key Features
 
 - **Wallet Integration**: Users can connect their Solana wallets to make payments.
-![Select Wallet](assets/select-wallet.png)
+<img src="assets/select-wallet.png" alt="Select Wallet" width="600" height="400" />
 - **Payment Processing**: Users can enter the merchant's address and the amount in SOL to process payments.
-![Wallet Detect](assets/wallet-detect.png)
+<img src="assets/wallet-detect.png" alt="Wallet Detect" width="600" height="400" />
 - **Real-time Quotes**: The application fetches real-time quotes for SOL to USDC swaps.
-![Wallet Connecting](assets/wallet-connecting.png)
+<img src="assets/wallet-connecting.png" alt="Wallet Connecting" width="600" height="400" />
 - **Responsive Design**: The application is designed to be mobile-friendly.
-![Wallet Connected](assets/wallet-connected.png)
+<img src="assets/wallet-connected.png" alt="Wallet Connected" width="600" height="400" />
 - **Error Handling**: Comprehensive error handling for wallet connection, payment processing, and API requests.
-![Confirm Transaction](assets/confirm-transaction.png)
-![Success Message](assets/succeess-message.png)
+<img src="assets/confirm-transaction.png" alt="Confirm Transaction" width="600" height="400" />
+<img src="assets/succeess-message.png" alt="Success Message" width="600" height="400" />
 
 ## Technologies Used
 
