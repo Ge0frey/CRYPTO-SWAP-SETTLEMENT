@@ -14,22 +14,22 @@ This is a payment gateway application that allows users to make payments in SOL 
 
 ## Touch of ui
 
-**Select Wallet**:
+<h4>Select Wallet</h4>
 <img src="assets/select-wallet.png" alt="Select Wallet" width="600" height="400" />
 
-**App will detect solana addresses installed in your browser**:
+<h4>App will detect solana addresses installed in your browser**</h4>
 <img src="assets/wallet-detect.png" alt="Wallet Detect" width="600" height="400" />
 
-**Wallet Connecting**:
+<h4>Wallet Connecting</h4>
 <img src="assets/wallet-connecting.png" alt="Wallet Connecting" width="600" height="400" />
 
-**Wallet connected Successfully**:
+<h4>Wallet connected Successfully</h4>
 <img src="assets/wallet-connected.png" alt="Wallet Connected" width="600" height="400" />
 
-**Confirm the Transaction**:
+<h4>Confirm the Transaction</h4>
 <img src="assets/confirm-transaction.png" alt="Confirm Transaction" width="600" height="400" />
 
-**Success message pop-up after a successfull transaction**:
+<h4>Success message pop-up after a successfull transaction</h4>
 <img src="assets/succeess-message.png" alt="Success Message" width="600" height="400" />
 
 ## Technologies Used
