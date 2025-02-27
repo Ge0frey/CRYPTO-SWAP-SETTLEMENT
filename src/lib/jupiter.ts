@@ -1,5 +1,7 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, VersionedTransaction } from "@solana/web3.js";
 import * as jupiterApi from '@jup-ag/api';
+import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import fetch from 'cross-fetch';
 
 const JUPITER_QUOTE_API = "https://quote-api.jup.ag/v6";
 
@@ -52,6 +54,18 @@ export const getSwapTransaction = async (
   merchantAddress: string
 ) => {
   try {
+    const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'); // USDC mint address
+
+    // Get the associated token account for the merchant wallet
+    const merchantUSDCTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      new PublicKey(merchantAddress),
+      true,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    // Fetch the swap transaction
     const response = await fetch(`${JUPITER_QUOTE_API}/swap`, {
       method: "POST",
       headers: {
@@ -60,7 +74,7 @@ export const getSwapTransaction = async (
       body: JSON.stringify({
         quoteResponse,
         userPublicKey,
-        destinationWallet: merchantAddress,
+        destinationTokenAccount: merchantUSDCTokenAccount.toBase58(), // Set destination to merchant's token account
         wrapUnwrapSOL: true
       })
     });
