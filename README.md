@@ -7,15 +7,29 @@ This is a payment gateway application that allows users to make payments in SOL 
 ## Key Features
 
 - **Wallet Integration**: Users can connect their Solana wallets to make payments.
-<img src="assets/select-wallet.png" alt="Select Wallet" width="600" height="400" />
 - **Payment Processing**: Users can enter the merchant's address and the amount in SOL to process payments.
-<img src="assets/wallet-detect.png" alt="Wallet Detect" width="600" height="400" />
 - **Real-time Quotes**: The application fetches real-time quotes for SOL to USDC swaps.
-<img src="assets/wallet-connecting.png" alt="Wallet Connecting" width="600" height="400" />
 - **Responsive Design**: The application is designed to be mobile-friendly.
-<img src="assets/wallet-connected.png" alt="Wallet Connected" width="600" height="400" />
 - **Error Handling**: Comprehensive error handling for wallet connection, payment processing, and API requests.
+
+## Touch of ui
+
+**Select Wallet**:
+<img src="assets/select-wallet.png" alt="Select Wallet" width="600" height="400" />
+
+**App will detect solana addresses installed in your browser**:
+<img src="assets/wallet-detect.png" alt="Wallet Detect" width="600" height="400" />
+
+**Wallet Connecting**:
+<img src="assets/wallet-connecting.png" alt="Wallet Connecting" width="600" height="400" />
+
+**Wallet connected Successfully**:
+<img src="assets/wallet-connected.png" alt="Wallet Connected" width="600" height="400" />
+
+**Confirm the Transaction**:
 <img src="assets/confirm-transaction.png" alt="Confirm Transaction" width="600" height="400" />
+
+**Success message pop-up after a successfull transaction**:
 <img src="assets/succeess-message.png" alt="Success Message" width="600" height="400" />
 
 ## Technologies Used
