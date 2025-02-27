@@ -156,8 +156,9 @@ const PaymentForm = () => {
       // Get swap transaction
       const swapResult = await getSwapTransaction(
         quoteResponse,
-        wallet.publicKey.toString(),
-        merchantAddress
+        wallet.publicKey,
+        merchantAddress,
+        wallet
       );
 
       if (!swapResult || !swapResult.swapTransaction) {
