@@ -3,6 +3,12 @@ import * as jupiterApi from '@jup-ag/api';
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import fetch from 'cross-fetch';
 
+// Initialize the connection using the RPC endpoint from the .env file
+const RPC_ENDPOINT = import.meta.env.VITE_RPC_ENDPOINT; // Access the RPC endpoint from .env
+const connection = new Connection(RPC_ENDPOINT, {
+  commitment: 'confirmed',
+});
+
 const JUPITER_QUOTE_API = "https://quote-api.jup.ag/v6";
 
 export const getQuote = async (
@@ -65,6 +71,12 @@ export const getSwapTransaction = async (
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
+    // Check if the merchant's token account exists
+    const accountInfo = await connection.getAccountInfo(merchantUSDCTokenAccount);
+    if (!accountInfo) {
+      throw new Error(`Merchant's USDC token account does not exist: ${merchantUSDCTokenAccount.toBase58()}`);
+    }
+
     // Fetch the swap transaction
     const response = await fetch(`${JUPITER_QUOTE_API}/swap`, {
       method: "POST",
@@ -74,7 +86,7 @@ export const getSwapTransaction = async (
       body: JSON.stringify({
         quoteResponse,
         userPublicKey,
-        destinationTokenAccount: merchantUSDCTokenAccount.toBase58(), // Set destination to merchant's token account
+        destinationTokenAccount: merchantUSDCTokenAccount.toBase58(), // Ensure this is correct
         wrapUnwrapSOL: true
       })
     });
